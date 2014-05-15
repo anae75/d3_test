@@ -134,6 +134,49 @@ function bar_chart(data, attrs) {
 
 }
 
+function pie_chart(data) {
+  var width = 300;
+  var height = 300;
+  var radius = 100;
+  color = d3.scale.category20c();
+
+  var g = d3.select(".chart")
+    .data([data])      // why does this have to be an array around the data array?
+    .attr("width", width)
+    .attr("height", height)
+    .append("g")
+    .attr("transform", "translate("+radius+","+radius+")");
+
+  // functions for generating arcs
+  var arc = d3.svg.arc()
+              .outerRadius(radius)
+              .innerRadius(0);
+  var textarc = d3.svg.arc().outerRadius(radius).innerRadius(50);
+
+  var pie = d3.layout.pie()
+              .value(function(d) {return d.value;});
+
+  // generate slices of the pie
+  var arcs = g.selectAll("g.slice")
+              .data(pie)
+              .enter()
+              .append("g")
+              .attr("class", "slice");
+
+  arcs.append("path")
+      .attr("fill", function(d,i){return color(i);})
+      .attr("d", arc);
+
+  // caption
+  arcs.append("text")
+      .attr("transform", function(d) {
+        return "translate(" + textarc.centroid(d) + ")";
+      })
+      .attr("style", "text-anchor: middle")
+      .text(function(d,i) { return data[i].name; });
+
+}
+
 //------------------------------------------------------------
 //------------------------------------------------------------
 function init()
@@ -144,7 +187,8 @@ function init()
 
   //pct_data = count_pct(dataset, "authority_label");
   pct_data = JSON.parse('[{"name":"Sole","value":0.855},{"name":"Joint","value":0.135},{"name":"What-If","value":0.01}]');
-  bar_chart(pct_data, [{name: "value", color: "red"}]);
+  //bar_chart(pct_data, [{name: "value", color: "red"}]);
+  pie_chart(pct_data);
 }
 
 jQuery(document).ready( function() { init(); } );
