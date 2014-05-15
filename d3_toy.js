@@ -32,7 +32,8 @@ DataSet.prototype.load_data = function()
         .each( function() {
           cell = jQuery(this);
           if(cell.hasClass("status")) {
-            cell_data.status = cell.text();
+            var text = cell.text().length == 0 ? "ok" : cell.text();
+            cell_data.status = text;
           }
           else if(cell.hasClass("authority_label")) {
             cell_data.authority_label = cell.text();
@@ -183,12 +184,14 @@ function init()
 {
   //jQuery("head").append('<link rel="stylesheet" href="//code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css">');
   //include("http://d3js.org/d3.v3.min.js");
-  //dataset = new DataSet({json: test_data});
+  dataset = new DataSet({json: test_data});
 
   //pct_data = count_pct(dataset, "authority_label");
   pct_data = JSON.parse('[{"name":"Sole","value":0.855},{"name":"Joint","value":0.135},{"name":"What-If","value":0.01}]');
   //bar_chart(pct_data, [{name: "value", color: "red"}]);
-  pie_chart(pct_data);
+  //pie_chart(pct_data);
+  //pie_chart(count_pct(dataset, "tracking_preference"));
+  pie_chart(count_pct(dataset, "status"));
 }
 
 jQuery(document).ready( function() { init(); } );
