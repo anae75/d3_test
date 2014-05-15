@@ -1,0 +1,37 @@
+#chart div.barchart {
+  font: 10px sans-serif;
+  background-color: steelblue;
+  text-align: left;
+  height: 5;
+  padding: 3px;
+  margin: 1px;
+  color: white;
+}
+
+svg.chart {
+  margin-top: 15px;
+}
+
+.chart rect {
+  fill: steelblue;
+}
+
+.chart rect.recommended {
+  fill: green;
+}
+.chart rect.current{
+  fill: red;
+}
+
+.chart line.divider {
+  stroke: #000000;
+  stroke-opacity: 0.3;
+}
+
+.chart text {
+  fill: black;
+  font: 10px sans-serif;
+  /* text-anchor: start; */
+  text-anchor: end;
+}
+
