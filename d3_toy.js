@@ -146,7 +146,7 @@ function ColorSpec()
 ColorSpec.prototype.set = function(key, color) 
 {
   this.colors[key] = color;
-  return color;
+  return this;
 }
 ColorSpec.prototype.get = function(key) 
 {
@@ -155,6 +155,12 @@ ColorSpec.prototype.get = function(key)
     color = this.backup_colors(key);
     this.colors[key] = color;
   }
+  return color;
+}
+ColorSpec.prototype.picker = function()
+{
+  var colorspec = this;
+  var color = function(key) { return colorspec.get(key); } 
   return color;
 }
 
@@ -189,7 +195,7 @@ function pie_chart(data, path, color) {
               .attr("class", "slice");
 
   arcs.append("path")
-      .attr("fill", function(d,i){console.log(d); return color(d.data.name);})
+      .attr("fill", function(d,i){return color(d.data.name);})
       .attr("d", arc);
 
   // caption
@@ -212,20 +218,20 @@ function init()
 
   //pct_data = JSON.parse('[{"name":"Sole","value":0.855},{"name":"Joint","value":0.135},{"name":"What-If","value":0.01}]');
 
-  var colorspec = new ColorSpec();
-  colorspec.set("Error", "red");
-  colorspec.set("Re-Analyze", "#6baed6");
-  colorspec.set("", "green");
-  var color = function(key) { return colorspec.get(key); } 
-  pie_chart(count_pct(dataset, "status"), "#status ", color);
+  var colorspec = new ColorSpec()
+           .set("Error", "red")
+           .set("Re-Analyze", "#6baed6")
+           .set("", "green");
+  pie_chart(count_pct(dataset, "status"), "#status ", colorspec.picker());
 
   //pie_chart(count_pct(dataset, "tracking_preference").sort(function(a,b) { return a.name - b.name; }), "#tracking_preference ");
   bar_chart(count_pct(dataset, "tracking_preference").sort(function(a,b) { return a.name - b.name; }), [{name: "value", color: "steelblue"}], "#tracking_preference ");
 
   //bar_chart(count_pct(dataset, "authority_label"), [{name: "value", color: "steelblue"}], "#authority_label ");
-  var colorspec = new ColorSpec();
-  var color = function(key) { return colorspec.get(key); } 
-  pie_chart(count_pct(dataset, "authority_label"), "#authority_label ", color);
+  var colorspec = new ColorSpec()
+                        .set("Joint", "yellow")
+                        .set("Sole", "green");
+  pie_chart(count_pct(dataset, "authority_label"), "#authority_label ", colorspec.picker());
 }
 
 jQuery(document).ready( function() { init(); } );
