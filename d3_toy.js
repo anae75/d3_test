@@ -386,6 +386,79 @@ function icicle(dataset)
       .text(function(d) { return d.depth + d.name; });
 }
 
+function zoom_icicle(dataset) 
+{
+  var width = 960,
+      height = 500;
+
+  var color = d3.scale.category20c();
+
+  var x = d3.scale.linear()
+      .range([0, width]);
+
+  var y = d3.scale.linear()
+      .range([0, height]);
+
+  var svg = d3.select("body").append("svg")
+      .attr("width", width)
+      .attr("height", height);
+
+  var partition = d3.layout.partition()
+      //.size([width, height])                  // using x and y scaling instead
+      .value(function(d) { return d.size; });
+
+  var nodes = partition.nodes(dataset.root);
+
+  svg.selectAll(".node")
+      .data(nodes)
+      .enter().append("rect")
+        .attr("class", "node")
+        .attr("x", function(d) { return x(d.x); })
+        .attr("y", function(d) { return y(d.y); })
+        .attr("width", function(d) { return x(d.dx); })
+        .attr("height", function(d) { return y(d.dy); })
+        .style("fill", function(d) { return color((d.children ? d : d.parent).name); });
+
+  var rect = svg.selectAll("rect");
+  rect.on("click", clicked);
+
+  function clicked(d) {
+    x.domain([d.x, d.x + d.dx]);
+    y.domain([d.y, 1]).range([d.y ? 20 : 0, height]);
+    rect.transition()
+        .duration(750)
+        .attr("x", function(d) { return x(d.x); })
+        .attr("y", function(d) { return y(d.y); })
+        .attr("width", function(d) { return x(d.x + d.dx) - x(d.x); })
+        .attr("height", function(d) { return y(d.y + d.dy) - y(d.y); });
+
+    jQuery("svg text").remove();  // XXX too broad fix later
+
+    // generate labels
+    rect.each( function(d) {
+      var new_x = debug1(d.x + d.dx/2);
+      var new_y = debug2(d.y + d.dy/2);
+      if(new_x < 0 || new_y < 0) { return; }
+      if(debug1(d.x) >= 960) { return; }
+      if(debug2(d.y ) >= 500) { return; }
+      console.log(d.name + " " + new_x + " " + new_y);
+
+      svg.append("text")
+      .attr("class","label")
+      .text(d.name)
+      .attr("style", "text-anchor: middle")
+      .attr("transform", "translate("+new_x+","+new_y+")");
+    });
+
+  }
+
+}
+
+
+
+//  svg.append("text").attr("class","label").text("hello").attr("transform", "translate(50,50)");
+
+
 //------------------------------------------------------------
 //------------------------------------------------------------
 function init(opts)
