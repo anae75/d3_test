@@ -1,3 +1,8 @@
+div.smallchart {
+  display: inline-block;
+  float: left;
+}
+
 #chart div.barchart {
   font: 10px sans-serif;
   background-color: steelblue;

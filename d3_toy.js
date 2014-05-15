@@ -87,7 +87,7 @@ function count_pct(dataset, attr)
   return data;
 }
 
-function bar_chart(data, attrs) {
+function bar_chart(data, attrs, path) {
     var raw_values = jQuery.map(data, function(item,i) {return item.value;});
     var width = 620;
     var barHeight = 15;
@@ -100,7 +100,7 @@ function bar_chart(data, attrs) {
                     .range([0,width-width_pad_right]);       // scalong less than width to leave room for text at the end
     // set the dimensions of the chart container
     // keep a handle on the container
-    var chart = d3.select(".chart")
+    var chart = d3.select(path + ".chart")
                  .attr("width", width)
                  .attr("height", (barHeight + g_pad_top) * data.length * 2);
     // create a bunch of g containers at the appropriate offsets for each data bar
@@ -135,13 +135,13 @@ function bar_chart(data, attrs) {
 
 }
 
-function pie_chart(data) {
+function pie_chart(data, path) {
   var width = 300;
   var height = 300;
   var radius = 100;
   color = d3.scale.category20c();
 
-  var g = d3.select(".chart")
+  var g = d3.select(path + ".chart")
     .data([data])      // why does this have to be an array around the data array?
     .attr("width", width)
     .attr("height", height)
@@ -186,12 +186,15 @@ function init()
   //include("http://d3js.org/d3.v3.min.js");
   dataset = new DataSet({json: test_data});
 
-  //pct_data = count_pct(dataset, "authority_label");
-  pct_data = JSON.parse('[{"name":"Sole","value":0.855},{"name":"Joint","value":0.135},{"name":"What-If","value":0.01}]');
-  //bar_chart(pct_data, [{name: "value", color: "red"}]);
-  //pie_chart(pct_data);
-  //pie_chart(count_pct(dataset, "tracking_preference"));
-  pie_chart(count_pct(dataset, "status"));
+  //pct_data = JSON.parse('[{"name":"Sole","value":0.855},{"name":"Joint","value":0.135},{"name":"What-If","value":0.01}]');
+
+  pie_chart(count_pct(dataset, "status"), "#status ");
+
+  //pie_chart(count_pct(dataset, "tracking_preference").sort(function(a,b) { return a.name - b.name; }), "#tracking_preference ");
+  bar_chart(count_pct(dataset, "tracking_preference").sort(function(a,b) { return a.name - b.name; }), [{name: "value", color: "steelblue"}], "#tracking_preference ");
+
+  //bar_chart(count_pct(dataset, "authority_label"), [{name: "value", color: "steelblue"}], "#authority_label ");
+  pie_chart(count_pct(dataset, "authority_label"), "#authority_label ");
 }
 
 jQuery(document).ready( function() { init(); } );
