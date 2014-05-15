@@ -135,11 +135,35 @@ function bar_chart(data, attrs, path) {
 
 }
 
-function pie_chart(data, path) {
+//------------------------------------------------------------
+//------------------------------------------------------------
+
+function ColorSpec() 
+{
+  this.colors = {};
+  this.backup_colors = d3.scale.category20c();
+}
+ColorSpec.prototype.set = function(key, color) 
+{
+  this.colors[key] = color;
+  return color;
+}
+ColorSpec.prototype.get = function(key) 
+{
+  var color = this.colors[key];
+  if(!color) {
+    color = this.backup_colors(key);
+    this.colors[key] = color;
+  }
+  return color;
+}
+
+//------------------------------------------------------------
+
+function pie_chart(data, path, color) {
   var width = 300;
   var height = 300;
   var radius = 100;
-  color = d3.scale.category20c();
 
   var g = d3.select(path + ".chart")
     .data([data])      // why does this have to be an array around the data array?
@@ -165,7 +189,7 @@ function pie_chart(data, path) {
               .attr("class", "slice");
 
   arcs.append("path")
-      .attr("fill", function(d,i){return color(i);})
+      .attr("fill", function(d,i){console.log(d); return color(d.data.name);})
       .attr("d", arc);
 
   // caption
@@ -188,13 +212,20 @@ function init()
 
   //pct_data = JSON.parse('[{"name":"Sole","value":0.855},{"name":"Joint","value":0.135},{"name":"What-If","value":0.01}]');
 
-  pie_chart(count_pct(dataset, "status"), "#status ");
+  var colorspec = new ColorSpec();
+  colorspec.set("Error", "red");
+  colorspec.set("Re-Analyze", "#6baed6");
+  colorspec.set("", "green");
+  var color = function(key) { return colorspec.get(key); } 
+  pie_chart(count_pct(dataset, "status"), "#status ", color);
 
   //pie_chart(count_pct(dataset, "tracking_preference").sort(function(a,b) { return a.name - b.name; }), "#tracking_preference ");
   bar_chart(count_pct(dataset, "tracking_preference").sort(function(a,b) { return a.name - b.name; }), [{name: "value", color: "steelblue"}], "#tracking_preference ");
 
   //bar_chart(count_pct(dataset, "authority_label"), [{name: "value", color: "steelblue"}], "#authority_label ");
-  pie_chart(count_pct(dataset, "authority_label"), "#authority_label ");
+  var colorspec = new ColorSpec();
+  var color = function(key) { return colorspec.get(key); } 
+  pie_chart(count_pct(dataset, "authority_label"), "#authority_label ", color);
 }
 
 jQuery(document).ready( function() { init(); } );
