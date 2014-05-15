@@ -20,6 +20,10 @@ function DataSet(opts)
   this.data_rows = [];
   if(opts.json) {
     this.from_json(opts.json);
+  } else if(opts.load == "oops") {
+    this.load_data_oops_page();
+  } else if(opts.load == "tt") {
+    this.load_data_tt_report();
   }
 }
 
@@ -28,7 +32,63 @@ DataSet.prototype.length = function()
   return this.data_rows.length;
 }
 
-DataSet.prototype.load_data = function()
+function TreeNode()
+{
+  this.name = null;
+  this.children = [];
+  return this;
+}
+
+DataSet.prototype.load_data_tt_report = function() 
+{
+  var root = new TreeNode();
+  var lookup = {};
+  var prev_rule;
+  var prev_mcat;
+  root.name = "Template";
+  jQuery("tr[id^=ttrn]").each(function() {
+    var row = jQuery(this);
+    var id = row.attr("id");
+    var node = new TreeNode();
+    lookup[id] = node;                  // remember this for parent lookup later
+
+    // find the parent if any
+    var match = row.attr("class").match(/child_of_(\S*)/);
+    var parent = null;
+    if(match) {         // rule nodes have child_of_N
+      var parent_id = match.last();
+      parent = lookup[parent_id];
+    } else if(row.hasClass("mcat")) {
+      parent = prev_rule;
+    } else if(row.hasClass("model")) {
+      parent = prev_mcat;
+    }
+
+    if(parent) {
+      parent.children.push(node);
+    } else {
+      root.children.push(node); 
+    }
+
+    // get the node name
+    node.name = row.children("td.name").text().trim();
+
+    // get the node size
+    node.size = str2number(row.children("td.current").text());
+    
+    // update prev pointers
+    if(row.hasClass("rule")) {
+      prev_rule = node;
+    } else if(row.hasClass("mcat")) {
+      prev_mcat = node;
+    }
+
+  });
+
+  this.root = root;
+}
+
+DataSet.prototype.load_data_oops_page = function()
 {
   var new_data_rows = [];
   jQuery("#overview_rows tr[id^=account]")
@@ -227,8 +287,9 @@ function histogram(dataset, attr, path, color)
   var formatCount = d3.format(",.0f");
 
   var margin = {top: 10, right: 30, bottom: 30, left: 30};
+  var padding = {top: 10, bottom: 100};
   var width = 550 - margin.left - margin.right;
-  var height = 300 - margin.top - margin.bottom;
+  var height = 400 - margin.top - margin.bottom - padding.top - padding.bottom;
 
   var scale_x = d3.scale.linear()
                 .domain([0,d3.max(raw_values)])
@@ -250,9 +311,9 @@ function histogram(dataset, attr, path, color)
 
   var svg = d3.select(path + " svg.chart")
       .attr("width", width + margin.left + margin.right)
-      .attr("height", height + margin.top + margin.bottom)
+      .attr("height", height + margin.top + margin.bottom + padding.bottom)
     .append("g")
-      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+      .attr("transform", "translate(" + margin.left + "," + (margin.top + padding.top)+ ")");
 
   var bar = svg.selectAll(".bar")
       .data(data)
@@ -268,16 +329,61 @@ function histogram(dataset, attr, path, color)
 
   bar.append("text")
       .attr("dy", ".75em")
-      .attr("y", 6)
+      .attr("y", -20)
       .attr("x", scale_x(data[0].dx) / 2)
       .attr("text-anchor", "middle")
+      //.attr("text-anchor", "end")
+      //.attr("transform", function(d) {return "rotate(-65)"; } )
       .text(function(d) { return formatCount(d.y); });
 
   svg.append("g")
       .attr("class", "x_axis")
       .attr("transform", "translate(0," + height + ")")
-      .call(xAxis);
+      .call(xAxis)
+      .selectAll("text")                        // rotate the axis labels
+        .attr("dx", "-1.5em")
+        .attr("dy", ".75em")
+        .attr("text-anchor", "end")
+        .attr("transform", function(d) {return "rotate(-65)"; } );
 
+}
+
+//------------------------------------------------------------
+//------------------------------------------------------------
+function icicle(dataset) 
+{
+  var width = 960,
+      height = 800;
+
+  var color = d3.scale.category20();
+
+  var svg = d3.select("body").append("svg")
+      .attr("width", width)
+      .attr("height", height);
+
+  var partition = d3.layout.partition()
+      .size([width, height])
+      .value(function(d) { return d.size; });
+
+  var nodes = partition.nodes(dataset.root);
+
+  svg.selectAll(".node")
+      .data(nodes)
+    .enter().append("rect")
+      .attr("class", "node")
+      .attr("x", function(d) { return d.x; })
+      .attr("y", function(d) { return d.y; })
+      .attr("width", function(d) { return d.dx; })
+      .attr("height", function(d) { return d.dy; })
+      .style("fill", function(d) { return color((d.children ? d : d.parent).name); });
+
+  svg.selectAll(".label")
+      .data(nodes.filter(function(d) { return d.dx > 6; }))
+    .enter().append("text")
+      .attr("class", "label")
+      .attr("dy", ".35em")
+      .attr("transform", function(d) { return "translate(" + (d.x + d.dx /(d.depth+1) ) + "," + (d.y + d.dy / 8) + ")rotate(90)"; })
+      .text(function(d) { return d.depth + d.name; });
 }
 
 //------------------------------------------------------------
@@ -293,8 +399,7 @@ function init(opts)
     dataset = new DataSet({json: test_data});
 
   } else {
-    dataset = new DataSet({});
-    dataset.load_data();
+    dataset = new DataSet({load: oops});
   }
 
   var root = jQuery("body");
@@ -310,14 +415,15 @@ function init(opts)
   parent.append("<div id=status class=smallchart><h2>Account Status</h2><svg class=chart></svg></div>")
   var colorspec = new ColorSpec()
            .set("Error", "red")
-           .set("Re-Analyze", "#6baed6")
+           //.set("Re-Analyze", "#6baed6")
+           .set("Re-Analyze", "orange")
            .set("ok", "green");
   pie_chart(count_pct(dataset, "status"), "#status ", colorspec.picker());
 
   parent.append("<div id=authority_label class=smallchart><h2>Authority Label</h2><svg class=chart></svg></div>")
   //bar_chart(count_pct(dataset, "authority_label"), [{name: "value", color: "steelblue"}], "#authority_label ");
   var colorspec = new ColorSpec()
-                        .set("Joint", "yellow")
+                        .set("Joint", "orange")
                         .set("Sole", "green");
   pie_chart(count_pct(dataset, "authority_label"), "#authority_label ", colorspec.picker());
 
