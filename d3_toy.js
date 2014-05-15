@@ -3,8 +3,16 @@ var debugvar;
 function str2number(str)
 {
   str = str.replace(/,/g, "");
-  match = str.match(/[\d\.]+/);
+  var match = str.match(/[\d\.]+/);
   return match ? parseFloat(match[0]) : 0.0;
+}
+
+function opportunity2number(str)
+{
+  if(str.trim() == "N/A") {
+    return null;
+  }
+  return str2number(str);
 }
 
 function DataSet(opts)
@@ -45,7 +53,7 @@ DataSet.prototype.load_data = function()
             cell_data.cash = str2number(cell.text());
           }
           else if(cell.hasClass("opportunity")) {
-            cell_data.opportunity = str2number(cell.text());
+            cell_data.opportunity = opportunity2number(cell.text());
           }
           else if(cell.prev().hasClass("opportunity")) {      /* tracking pref is not tagged */
             cell_data.tracking_preference = str2number(cell.text());
@@ -63,6 +71,7 @@ DataSet.prototype.load_data = function()
 }
 
 DataSet.prototype.from_json = function(str) { this.data_rows = JSON.parse(str); }
+DataSet.prototype.to_json = function() { return JSON.stringify(this.data_rows); }
 
 //------------------------------------------------------------
 //------------------------------------------------------------
@@ -213,6 +222,7 @@ function pie_chart(data, path, color)
 function histogram(dataset, attr, path, color)
 {
   var raw_values = jQuery.map(dataset.data_rows, function(item,i) {return item[attr];});
+  raw_values = jQuery.grep(raw_values, function(val, i) { return val != null;});
 
   var formatCount = d3.format(",.0f");
 
@@ -226,7 +236,8 @@ function histogram(dataset, attr, path, color)
 
   // array of groups of binned values
   var data = d3.layout.histogram()
-      .bins(scale_x.ticks(20))            // returns a function based on an array of tick values
+      .bins(scale_x.ticks(10))            // returns a function based on an array of tick values
+      //.bins([0,1000000,2000000,3000000,4000000,5000000,30000000 ])            // returns a function based on an array of tick values
       (raw_values);
 
   var scale_y = d3.scale.linear()
@@ -252,7 +263,8 @@ function histogram(dataset, attr, path, color)
   bar.append("rect")
       .attr("x", 1)
       .attr("width", scale_x(data[0].dx) - 1)
-      .attr("height", function(d) { return height - scale_y(d.y); });
+      .attr("height", function(d) { return height - scale_y(d.y); })
+      .attr("fill", color(0));
 
   bar.append("text")
       .attr("dy", ".75em")
@@ -262,7 +274,7 @@ function histogram(dataset, attr, path, color)
       .text(function(d) { return formatCount(d.y); });
 
   svg.append("g")
-      .attr("class", "x axis")
+      .attr("class", "x_axis")
       .attr("transform", "translate(0," + height + ")")
       .call(xAxis);
 
@@ -270,31 +282,81 @@ function histogram(dataset, attr, path, color)
 
 //------------------------------------------------------------
 //------------------------------------------------------------
-function init()
+function init(opts)
 {
-  //jQuery("head").append('<link rel="stylesheet" href="//code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css">');
   //include("http://d3js.org/d3.v3.min.js");
-  dataset = new DataSet({json: test_data});
 
+  if(opts.standalone) {
+    jQuery("head").append('<link rel="stylesheet" href="//code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css">');
+    jQuery("head").append('<style type="text/css">div.layer { clear: both; } div.smallchart { display: inline-block; float: left; } #chart div.barchart { font: 10px sans-serif; background-color: steelblue; text-align: left; height: 5; padding: 3px; margin: 1px; color: white; } svg.chart { margin-top: 15px; } .chart rect { fill: steelblue; } .chart rect.recommended { fill: green; } .chart rect.current{ fill: red; } .chart line.divider { stroke: #000000; stroke-opacity: 0.3; } .chart text { fill: black; font: 10px sans-serif; /* text-anchor: start; */ text-anchor: end; } g.x_axis { fill: none; font-weight: normal; stroke: #000000; stroke-width: 1; } <style>');
+
+    dataset = new DataSet({json: test_data});
+
+  } else {
+    dataset = new DataSet({});
+    dataset.load_data();
+  }
+
+  var root = jQuery("body");
+
+  if(!opts.standalone) {
+    root.append("<div id=d3test>");
+    root = jQuery("#d3test");
+  }
+
+  root.append("<div class=layer>");
+  parent = jQuery("div.layer").last();
+   
+  parent.append("<div id=status class=smallchart><h2>Account Status</h2><svg class=chart></svg></div>")
   var colorspec = new ColorSpec()
            .set("Error", "red")
            .set("Re-Analyze", "#6baed6")
            .set("ok", "green");
   pie_chart(count_pct(dataset, "status"), "#status ", colorspec.picker());
 
-  //pie_chart(count_pct(dataset, "tracking_preference").sort(function(a,b) { return a.name - b.name; }), "#tracking_preference ");
-  bar_chart(count_pct(dataset, "tracking_preference").sort(function(a,b) { return a.name - b.name; }), [{name: "value", color: "steelblue"}], "#tracking_preference ");
-
+  parent.append("<div id=authority_label class=smallchart><h2>Authority Label</h2><svg class=chart></svg></div>")
   //bar_chart(count_pct(dataset, "authority_label"), [{name: "value", color: "steelblue"}], "#authority_label ");
   var colorspec = new ColorSpec()
                         .set("Joint", "yellow")
                         .set("Sole", "green");
   pie_chart(count_pct(dataset, "authority_label"), "#authority_label ", colorspec.picker());
 
-  histogram(dataset, "opportunity", "#opportunity", null);
+  root.append("<div class=layer>");
+  parent = jQuery("div.layer").last();
+
+  parent.append("<div id=tracking_preference class=smallchart><h2>Tracking Pref</h2><svg class=chart></svg></div>")
+  //pie_chart(count_pct(dataset, "tracking_preference").sort(function(a,b) { return a.name - b.name; }), "#tracking_preference ");
+  bar_chart(count_pct(dataset, "tracking_preference").sort(function(a,b) { return a.name - b.name; }), [{name: "value", color: "steelblue"}], "#tracking_preference ");
+
+  root.append("<div class=layer>");
+  parent = jQuery("div.layer").last();
+
+  var colorspec = new ColorSpec()
+  parent.append("<div id=opportunity class=smallchart><h2>Opportunity</h2><svg class=chart></svg></div>")
+  histogram(dataset, "opportunity", "#opportunity", colorspec.picker());
+
+
+  var colorspec = new ColorSpec()
+  parent.append("<div id=aum class=smallchart><h2>aum</h2><svg class=chart></svg></div>")
+  histogram(dataset, "aum", "#aum", colorspec.picker());
+
+  if(!opts.standalone) {
+    root.dialog({modal: true, width:900});
+  }
 }
 
-jQuery(document).ready( function() { init(); } );
+function inSmartleaf()
+{
+  return jQuery("body.appPage").length > 0;
+}
+
+// standalone=false if running in the app
+jQuery(document).ready( function() { init({standalone: !inSmartleaf()}); } );
+
+
+
+
+
 
 //------------------------------------------------------------
 //- Test data below !!!! -------------------------------------
