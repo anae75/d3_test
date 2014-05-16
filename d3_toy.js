@@ -396,7 +396,6 @@ function clean(dataset)
   while(stack.length > 0) {
     var node = stack.pop();
     //node.name = "n_" + counter;
-    node.name = node.name.substr(0,25);
     dataset.lookup[node.name] = node;
     counter ++;
     if(node.children && node.children.length > 0) {
@@ -452,7 +451,9 @@ function zoom_icicle(dataset)
         .attr("y", function(d) { return y(d.y); })
         .attr("width", function(d) { return x(d.dx); })
         .attr("height", function(d) { return y(d.dy); })
-        .style("fill", function(d) { return color((d.children ? d : d.parent).name); });
+        .style("fill", function(d) { return color((d.children ? d : d.parent).name); })
+        .append("svg:title")
+          .text(function(d) { return d.name; } );
 
   var rect = svg.selectAll("rect");
   rect.on("click", clicked);
@@ -484,17 +485,25 @@ function zoom_icicle(dataset)
       //console.log(d.dx + " -> " + new_x );
       //console.log(d.dy + " -> " + new_y );
 
+      var name = x(d.x + d.dx) - x(d.x) > 200 ? d.name.substr(0,20) : "";
+
       svg.append("text")
       .attr("class","label")
-      .text(d.name)
+      .text(name)
       .attr("style", "text-anchor: middle")
-      .attr("transform", "translate("+new_x+","+new_y+")rotate(-75)")
+      .attr("transform", "translate("+new_x+","+new_y+")")
     });
 
   }
 
 }
 
+function print_name(str)
+{
+  var words = str.trim().split(/\s+/);
+  var word_starts = jQuery.map(words, function(word) { return word.substr(0,3); });
+  return word_starts.join(" ");
+}
 
 
 //  svg.append("text").attr("class","label").text("hello").attr("transform", "translate(50,50)");
