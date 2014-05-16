@@ -458,19 +458,10 @@ function zoom_icicle(dataset)
   var rect = svg.selectAll("rect");
   rect.on("click", clicked);
 
-  function clicked(d) {
-    x.domain([d.x, d.x + d.dx]);
-    y.domain([d.y, 1]).range([d.y ? 20 : 0, height]);
-    rect.transition()
-        .duration(750)
-        .attr("x", function(d) { return x(d.x); })
-        .attr("y", function(d) { return y(d.y); })
-        .attr("width", function(d) { return x(d.x + d.dx) - x(d.x); })
-        .attr("height", function(d) { return y(d.y + d.dy) - y(d.y); });
+  update_text(false);
 
-    jQuery("svg text").remove();  // XXX too broad fix later
-
-    // generate labels
+  function update_text(delay) {
+  // generate labels
     rect.each( function(d) {
       var new_x = x(d.x + d.dx/2);
       var new_y = y(d.y + d.dy/2);
@@ -487,13 +478,33 @@ function zoom_icicle(dataset)
 
       var name = x(d.x + d.dx) - x(d.x) > 200 ? d.name.substr(0,20) : "";
 
-      svg.append("text")
+      var text = svg.append("text")
       .attr("class","label")
       .text(name)
       .attr("style", "text-anchor: middle")
-      .attr("transform", "translate("+new_x+","+new_y+")")
-    });
+      .attr("transform", "translate("+new_x+","+new_y+")");
 
+      if(delay) {
+        text.style("fill-opacity", 0)
+        .transition().duration(600).delay(500).style("fill-opacity", 100);
+      }
+    });
+  }
+
+  function clicked(d) {
+    x.domain([d.x, d.x + d.dx]);
+    y.domain([d.y, 1]).range([d.y ? 20 : 0, height]);
+    rect.transition()
+        .duration(750)
+        .attr("x", function(d) { return x(d.x); })
+        .attr("y", function(d) { return y(d.y); })
+        .attr("width", function(d) { return x(d.x + d.dx) - x(d.x); })
+        .attr("height", function(d) { return y(d.y + d.dy) - y(d.y); });
+
+    jQuery("svg text").remove();  // XXX too broad fix later
+
+    // generate labels
+    update_text(true);
   }
 
 }
