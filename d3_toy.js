@@ -130,8 +130,22 @@ DataSet.prototype.load_data_oops_page = function()
   this.data_rows = new_data_rows;
 }
 
-DataSet.prototype.from_json = function(str) { this.data_rows = JSON.parse(str); }
-DataSet.prototype.to_json = function() { return JSON.stringify(this.data_rows); }
+DataSet.prototype.from_json = function(str) 
+{
+  var data = JSON.parse(str);
+  if(data.hasOwnProperty("children")) {
+    this.root = data;
+  } else {
+    this.data_rows = data;
+  }
+}
+DataSet.prototype.to_json = function()
+{
+  if(this.root) {
+    return JSON.stringify(this.root);
+  }
+  return JSON.stringify(this.data_rows);
+}
 
 //------------------------------------------------------------
 //------------------------------------------------------------
@@ -417,7 +431,7 @@ function clean(dataset)
   }
 }
 
-function zoom_icicle(dataset) 
+function zoom_icicle(dataset)
 {
   var width = 960,
       height = 500;
@@ -626,8 +640,8 @@ function fake_tree(nlevels)
 // standalone=false if running in the app
 //jQuery(document).ready( function() { init({standalone: !inSmartleaf()}); } );
 jQuery(document).ready( function() {
-  dataset = new DataSet({});
-  dataset.root = JSON.parse(tree_data);
+  dataset = new DataSet({json: tree_data});
+  //dataset.root = JSON.parse(tree_data);
   //clean(dataset);
 
   //dataset = fake_tree(4);
